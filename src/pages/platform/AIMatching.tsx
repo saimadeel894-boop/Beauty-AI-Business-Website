@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Zap, Target, TrendingUp, Brain, Beaker, ArrowRight, Loader2, RefreshCw } from "lucide-react";
+import { Sparkles, Zap, Target, TrendingUp, Brain, Beaker, Loader2 } from "lucide-react";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -21,111 +21,6 @@ interface MatchResult {
   role: string;
 }
 
-// Weighted rule-based scoring for manufacturer fallback
-function scoreManufacturer(brand: any, mfg: any): { score: number; explanation: string } {
-  const brandCategories: string[] = brand?.categories || brand?.productCategories || [];
-  const brandCerts: string[] = brand?.certifications || [];
-  const brandLocation: string = (brand?.location || "").toLowerCase();
-  const brandMoq: string = brand?.moq || brand?.annualVolume || "";
-
-  const brandProductCat = (brand?.productCategory || "").toLowerCase();
-
-  // Category overlap (30%) - also consider brand's product_category
-  const mfgCats: string[] = mfg.categories || [];
-  const allBrandCats = [...brandCategories];
-  if (brandProductCat && !allBrandCats.some(c => c.toLowerCase() === brandProductCat)) {
-    allBrandCats.push(brandProductCat);
-  }
-  const catOverlap = allBrandCats.length > 0
-    ? mfgCats.filter((c: string) => allBrandCats.some((bc: string) => bc.toLowerCase() === c.toLowerCase())).length / Math.max(allBrandCats.length, 1)
-    : mfgCats.length > 0 ? 0.5 : 0.3;
-  const catScore = Math.min(1, catOverlap) * 100;
-
-  // Certifications match (25%)
-  const mfgCerts: string[] = mfg.certifications || [];
-  const certOverlap = brandCerts.length > 0
-    ? mfgCerts.filter((c: string) => brandCerts.some((bc: string) => bc.toLowerCase() === c.toLowerCase())).length / Math.max(brandCerts.length, 1)
-    : mfgCerts.length > 0 ? 0.6 : 0.2;
-  const certScore = Math.min(1, certOverlap) * 100;
-
-  // Location proximity (20%)
-  const mfgLoc = (mfg.location || "").toLowerCase();
-  const locScore = brandLocation && mfgLoc
-    ? (mfgLoc.includes(brandLocation) || brandLocation.includes(mfgLoc) ? 100 : 40)
-    : 50;
-
-  // MOQ compatibility (15%)
-  const moqScore = mfg.moq ? 70 : 50; // Basic: has MOQ info = better
-
-  // Capacity & expertise signal (10%) - includes formulation_expertise
-  const expertiseBonus = (mfg.formulationExpertise?.length || 0) > 0 ? 30 : 0;
-  const capScore = (mfg.description ? 40 : 20) + (mfg.leadTime ? 20 : 0) + expertiseBonus + (mfg.categories?.length > 2 ? 10 : 0);
-
-  const weighted = catScore * 0.3 + certScore * 0.25 + locScore * 0.2 + moqScore * 0.15 + Math.min(100, capScore) * 0.1;
-  const final = Math.round(Math.min(100, Math.max(0, weighted)));
-
-  const parts: string[] = [];
-  if (catScore >= 70) parts.push(`strong category match (${mfgCats.slice(0, 2).join(", ")})`);
-  if (certScore >= 70) parts.push(`${mfgCerts.length} relevant certifications`);
-  if (locScore >= 80) parts.push("location aligned");
-  const explanation = parts.length > 0 ? `Score driven by ${parts.join("; ")}.` : `${mfgCats.length} categories, ${mfgCerts.length} certifications available.`;
-
-  return { score: final, explanation };
-}
-
-// Weighted rule-based scoring for influencer fallback
-function scoreInfluencer(brand: any, inf: any): { score: number; explanation: string } {
-  const brandIndustry = (brand?.industry || brand?.productCategory || brand?.niche || "").toLowerCase();
-  const brandLocation = (brand?.location || brand?.targetMarket || "").toLowerCase();
-  const brandPlatform = (brand?.targetPlatform || "").toLowerCase();
-
-  // Niche alignment (30%)
-  const niche = (inf.niche || "").toLowerCase();
-  const nicheScore = brandIndustry && niche
-    ? (niche.includes(brandIndustry) || brandIndustry.includes(niche) ? 90 : 45)
-    : niche ? 50 : 30;
-
-  // Engagement rate (25%) - use real data when available
-  const engRate = inf.engagementRate || 0;
-  const followerCount = inf.followerCount || 0;
-  let engScore: number;
-  if (engRate > 0) {
-    // Real engagement data: 1-3% = decent, 3-6% = good, 6%+ = excellent
-    engScore = Math.min(100, engRate * 15);
-  } else if (followerCount > 0) {
-    engScore = Math.min(100, 40 + Math.log10(followerCount) * 12);
-  } else {
-    engScore = 30;
-  }
-
-  // Location & audience geography (20%)
-  const infLoc = (inf.location || "").toLowerCase();
-  const locScore = brandLocation && infLoc
-    ? (infLoc.includes(brandLocation) || brandLocation.includes(infLoc) ? 100 : 40)
-    : 50;
-
-  // Platform match (15%)
-  const platform = (inf.primaryPlatform || "").toLowerCase();
-  const platformScore = brandPlatform
-    ? (platform === brandPlatform ? 100 : 40)
-    : platform ? 60 : 30;
-
-  // Audience demographics fit (10%)
-  const hasDemographics = inf.followerDemographics && Object.keys(inf.followerDemographics).length > 0;
-  const demoScore = hasDemographics ? 70 : (niche && niche !== "general" ? 50 : 30);
-
-  const weighted = nicheScore * 0.3 + engScore * 0.25 + locScore * 0.2 + platformScore * 0.15 + demoScore * 0.1;
-  const final = Math.round(Math.min(100, Math.max(0, weighted)));
-
-  const parts: string[] = [];
-  parts.push(`${inf.primaryPlatform || "Unknown"} creator`);
-  if (inf.niche) parts.push(`niche: ${inf.niche}`);
-  if (engRate > 0) parts.push(`${engRate}% engagement`);
-  if (followerCount > 0) parts.push(`${followerCount.toLocaleString()} followers`);
-  const explanation = parts.join(", ") + ". Score based on weighted criteria alignment.";
-  return { score: final, explanation };
-}
-
 export default function AIMatching() {
   const { user, profile } = useFirebaseAuth();
   const { toast } = useToast();
@@ -133,13 +28,14 @@ export default function AIMatching() {
   const [influencerMatches, setInfluencerMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastRun, setLastRun] = useState<Date | null>(null);
+  const [scoringMethod, setScoringMethod] = useState<string>("");
 
   const runMatching = async () => {
     if (!user || !profile) return;
     setLoading(true);
 
     try {
-      // Fetch brand profile for context
+      // Fetch brand profile
       let brandContext: any = {};
       if (profile.role === "brand") {
         const brandSnap = await getDocs(collection(db, "brandProfiles"));
@@ -162,7 +58,7 @@ export default function AIMatching() {
         leadTime: d.data().leadTime || d.data().lead_time,
       }));
 
-      // Fetch influencers with expanded metrics
+      // Fetch influencers
       const infSnap = await getDocs(collection(db, "influencerProfiles"));
       const influencers = infSnap.docs.map(d => ({
         id: d.id,
@@ -176,130 +72,63 @@ export default function AIMatching() {
         followerDemographics: d.data().followerDemographics || d.data().follower_demographics || {},
       }));
 
-      // AI match manufacturers
+      // Match manufacturers
       if (manufacturers.length > 0) {
         try {
-          const { data: mfgData, error: mfgError } = await supabase.functions.invoke("ai-match", {
-            body: {
-              type: "manufacturer-match",
-              brandProfile: brandContext,
-              candidates: manufacturers,
-            },
+          const { data, error } = await supabase.functions.invoke("ai-match", {
+            body: { type: "manufacturer-match", brandProfile: brandContext, candidates: manufacturers },
           });
-
-          if (!mfgError && mfgData?.result) {
-            try {
-              const parsed = JSON.parse(mfgData.result);
-              const results: MatchResult[] = parsed.map((p: any) => {
-                const mfg = manufacturers.find(m => m.id === p.candidateId);
-                return {
-                  candidateId: p.candidateId,
-                  candidateName: mfg?.companyName || p.candidateId,
-                  matchScore: Math.min(100, Math.max(0, p.matchScore)),
-                  explanation: p.explanation,
-                  categories: mfg?.categories || [],
-                  location: mfg?.location || "Unknown",
-                  role: "Manufacturer",
-                };
-              });
-              setManufacturerMatches(results.sort((a, b) => b.matchScore - a.matchScore));
-            } catch {
-              // Fallback: deterministic weighted scoring
-              const fallback = manufacturers.map(m => {
-                const { score, explanation } = scoreManufacturer(brandContext, m);
-                return {
-                  candidateId: m.id,
-                  candidateName: m.companyName,
-                  matchScore: score,
-                  explanation,
-                  categories: m.categories,
-                  location: m.location || "Unknown",
-                  role: "Manufacturer",
-                };
-              });
-              setManufacturerMatches(fallback.sort((a, b) => b.matchScore - a.matchScore));
-            }
+          if (!error && data?.result) {
+            const parsed = JSON.parse(data.result);
+            const results: MatchResult[] = parsed.map((p: any) => {
+              const mfg = manufacturers.find(m => m.id === p.candidateId);
+              return {
+                candidateId: p.candidateId,
+                candidateName: mfg?.companyName || p.candidateId,
+                matchScore: p.matchScore,
+                explanation: p.explanation,
+                categories: mfg?.categories || [],
+                location: mfg?.location || "Unknown",
+                role: "Manufacturer",
+              };
+            });
+            setManufacturerMatches(results.sort((a, b) => b.matchScore - a.matchScore));
+            if (data.method) setScoringMethod(data.method);
           }
-        } catch {
-          // Rule-based weighted fallback
-          const fallback = manufacturers.map(m => {
-            const { score, explanation } = scoreManufacturer(brandContext, m);
-            return {
-              candidateId: m.id,
-              candidateName: m.companyName,
-              matchScore: score,
-              explanation,
-              categories: m.categories,
-              location: m.location || "Unknown",
-              role: "Manufacturer",
-            };
-          });
-          setManufacturerMatches(fallback.sort((a, b) => b.matchScore - a.matchScore));
+        } catch (err) {
+          console.error("Manufacturer matching error:", err);
         }
       }
 
-      // AI match influencers
+      // Match influencers
       if (influencers.length > 0) {
         try {
-          const { data: infData, error: infError } = await supabase.functions.invoke("ai-match", {
-            body: {
-              type: "influencer-match",
-              brandProfile: brandContext,
-              candidates: influencers,
-            },
+          const { data, error } = await supabase.functions.invoke("ai-match", {
+            body: { type: "influencer-match", brandProfile: brandContext, candidates: influencers },
           });
-
-          if (!infError && infData?.result) {
-            try {
-              const parsed = JSON.parse(infData.result);
-              const results: MatchResult[] = parsed.map((p: any) => {
-                const inf = influencers.find(i => i.id === p.candidateId);
-                return {
-                  candidateId: p.candidateId,
-                  candidateName: inf?.name || p.candidateId,
-                  matchScore: Math.min(100, Math.max(0, p.matchScore)),
-                  explanation: p.explanation,
-                  categories: [inf?.primaryPlatform || "Unknown"],
-                  location: inf?.location || "Unknown",
-                  role: "Influencer",
-                };
-              });
-              setInfluencerMatches(results.sort((a, b) => b.matchScore - a.matchScore));
-            } catch {
-              const fallback = influencers.map(i => {
-                const { score, explanation } = scoreInfluencer(brandContext, i);
-                return {
-                  candidateId: i.id,
-                  candidateName: i.name,
-                  matchScore: score,
-                  explanation,
-                  categories: [i.primaryPlatform],
-                  location: i.location,
-                  role: "Influencer",
-                };
-              });
-              setInfluencerMatches(fallback.sort((a, b) => b.matchScore - a.matchScore));
-            }
+          if (!error && data?.result) {
+            const parsed = JSON.parse(data.result);
+            const results: MatchResult[] = parsed.map((p: any) => {
+              const inf = influencers.find(i => i.id === p.candidateId);
+              return {
+                candidateId: p.candidateId,
+                candidateName: inf?.name || p.candidateId,
+                matchScore: p.matchScore,
+                explanation: p.explanation,
+                categories: [inf?.primaryPlatform || "Unknown"],
+                location: inf?.location || "Unknown",
+                role: "Influencer",
+              };
+            });
+            setInfluencerMatches(results.sort((a, b) => b.matchScore - a.matchScore));
           }
-        } catch {
-          const fallback = influencers.map(i => {
-            const { score, explanation } = scoreInfluencer(brandContext, i);
-            return {
-              candidateId: i.id,
-              candidateName: i.name,
-              matchScore: score,
-              explanation,
-              categories: [i.primaryPlatform],
-              location: i.location,
-              role: "Influencer",
-            };
-          });
-          setInfluencerMatches(fallback.sort((a, b) => b.matchScore - a.matchScore));
+        } catch (err) {
+          console.error("Influencer matching error:", err);
         }
       }
 
       setLastRun(new Date());
-      toast({ title: "Analysis Complete", description: "AI matching results updated." });
+      toast({ title: "Analysis Complete", description: "AI matching results updated and persisted." });
     } catch (err) {
       console.error("Matching error:", err);
       toast({ title: "Error", description: "Failed to run matching analysis", variant: "destructive" });
@@ -329,7 +158,9 @@ export default function AIMatching() {
               <div>
                 <h1 className="text-2xl font-bold text-foreground">AI Matching & Formulation</h1>
                 <p className="text-sm text-muted-foreground">
-                  {lastRun ? `Last analysis: ${lastRun.toLocaleTimeString()}` : "Run analysis to see matches"}
+                  {lastRun
+                    ? `Last analysis: ${lastRun.toLocaleTimeString()}${scoringMethod ? ` (${scoringMethod})` : ""}`
+                    : "Run analysis to see matches"}
                 </p>
               </div>
             </div>
@@ -362,6 +193,30 @@ export default function AIMatching() {
             );
           })}
         </div>
+
+        {/* Scoring Weights Reference */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Scoring Weights</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                { label: "Formulation", weight: "30%" },
+                { label: "MOQ", weight: "20%" },
+                { label: "Certifications", weight: "15%" },
+                { label: "Historical", weight: "15%" },
+                { label: "Location", weight: "10%" },
+                { label: "Lead Time", weight: "10%" },
+              ].map(w => (
+                <div key={w.label} className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <span className="text-xs text-muted-foreground">{w.label}</span>
+                  <Badge variant="secondary" className="text-xs">{w.weight}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Manufacturer Matches */}
