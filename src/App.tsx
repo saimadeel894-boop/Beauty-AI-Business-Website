@@ -54,7 +54,7 @@ import PaymentsWallets from "./pages/platform/PaymentsWallets";
 import EscrowPayment from "./pages/platform/EscrowPayment";
 import ContractGeneration from "./pages/platform/ContractGeneration";
 import DisputeResolution from "./pages/platform/DisputeResolution";
-
+import AdminDashboard from "./pages/platform/AdminDashboard";
 const queryClient = new QueryClient();
 
 const App = () => (

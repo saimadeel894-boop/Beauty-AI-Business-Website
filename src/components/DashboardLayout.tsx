@@ -38,6 +38,7 @@ import {
   Lock,
   ScrollText,
   Gavel,
+  ShieldCheck,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
