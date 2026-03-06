@@ -109,6 +109,7 @@ export function BrandRfqDetailDialog({ rfq, onClose }: BrandRfqDetailDialogProps
                 Description
               </h4>
               <p className="text-sm whitespace-pre-wrap">{rfq.description}</p>
+              <TranslateButton text={rfq.description} context="rfq_description" />
             </div>
           )}
 
