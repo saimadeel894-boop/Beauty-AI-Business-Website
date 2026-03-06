@@ -68,8 +68,8 @@ function scoreManufacturer(brand: any, mfg: any): { score: number; explanation: 
 
 // Weighted rule-based scoring for influencer fallback
 function scoreInfluencer(brand: any, inf: any): { score: number; explanation: string } {
-  const brandIndustry = (brand?.industry || brand?.niche || "").toLowerCase();
-  const brandLocation = (brand?.location || "").toLowerCase();
+  const brandIndustry = (brand?.industry || brand?.productCategory || brand?.niche || "").toLowerCase();
+  const brandLocation = (brand?.location || brand?.targetMarket || "").toLowerCase();
   const brandPlatform = (brand?.targetPlatform || "").toLowerCase();
 
   // Niche alignment (30%)
@@ -78,28 +78,44 @@ function scoreInfluencer(brand: any, inf: any): { score: number; explanation: st
     ? (niche.includes(brandIndustry) || brandIndustry.includes(niche) ? 90 : 45)
     : niche ? 50 : 30;
 
-  // Platform match (25%)
-  const platform = (inf.primaryPlatform || "").toLowerCase();
-  const platformScore = brandPlatform
-    ? (platform === brandPlatform ? 100 : 40)
-    : platform ? 60 : 30;
+  // Engagement rate (25%) - use real data when available
+  const engRate = inf.engagementRate || 0;
+  const followerCount = inf.followerCount || 0;
+  let engScore: number;
+  if (engRate > 0) {
+    // Real engagement data: 1-3% = decent, 3-6% = good, 6%+ = excellent
+    engScore = Math.min(100, engRate * 15);
+  } else if (followerCount > 0) {
+    engScore = Math.min(100, 40 + Math.log10(followerCount) * 12);
+  } else {
+    engScore = 30;
+  }
 
-  // Location relevance (20%)
+  // Location & audience geography (20%)
   const infLoc = (inf.location || "").toLowerCase();
   const locScore = brandLocation && infLoc
     ? (infLoc.includes(brandLocation) || brandLocation.includes(infLoc) ? 100 : 40)
     : 50;
 
-  // Engagement potential (15%) - proxy from available data
-  const engScore = inf.followers ? Math.min(100, 40 + Math.log10(inf.followers) * 15) : 50;
+  // Platform match (15%)
+  const platform = (inf.primaryPlatform || "").toLowerCase();
+  const platformScore = brandPlatform
+    ? (platform === brandPlatform ? 100 : 40)
+    : platform ? 60 : 30;
 
-  // Content quality (10%) - proxy
-  const contentScore = niche && niche !== "general" ? 70 : 40;
+  // Audience demographics fit (10%)
+  const hasDemographics = inf.followerDemographics && Object.keys(inf.followerDemographics).length > 0;
+  const demoScore = hasDemographics ? 70 : (niche && niche !== "general" ? 50 : 30);
 
-  const weighted = nicheScore * 0.3 + platformScore * 0.25 + locScore * 0.2 + engScore * 0.15 + contentScore * 0.1;
+  const weighted = nicheScore * 0.3 + engScore * 0.25 + locScore * 0.2 + platformScore * 0.15 + demoScore * 0.1;
   const final = Math.round(Math.min(100, Math.max(0, weighted)));
 
-  const explanation = `Active on ${inf.primaryPlatform || "Unknown"}. Niche: ${inf.niche || "General"}. Weighted score based on alignment criteria.`;
+  const parts: string[] = [];
+  parts.push(`${inf.primaryPlatform || "Unknown"} creator`);
+  if (inf.niche) parts.push(`niche: ${inf.niche}`);
+  if (engRate > 0) parts.push(`${engRate}% engagement`);
+  if (followerCount > 0) parts.push(`${followerCount.toLocaleString()} followers`);
+  const explanation = parts.join(", ") + ". Score based on weighted criteria alignment.";
   return { score: final, explanation };
 }
 
