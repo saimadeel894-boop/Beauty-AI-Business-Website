@@ -25,6 +25,9 @@ interface BrandProfileData {
   brandStory?: string;
   targetMarket?: string;
   productCategories?: string[];
+  productCategory?: string;
+  ingredientPreferences?: string;
+  pricingPositioning?: string;
   annualVolume?: string;
   distributionChannels?: string[];
   collaborationInterests?: string[];
