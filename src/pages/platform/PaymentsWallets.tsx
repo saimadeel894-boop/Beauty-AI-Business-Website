@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,22 +6,39 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, Clock, CreditCard, MoreVertical, CalendarDays } from "lucide-react";
-
-const transactions = [
-  { date: "Oct 24, 2023", desc: "Batch #402 Production", entity: "LuxeLabs Mfg.", initial: "L", color: "bg-indigo-100 text-indigo-600", status: "Paid", statusColor: "bg-green-50 text-green-700", amount: "-$4,500.00", amountColor: "" },
-  { date: "Oct 22, 2023", desc: "Consultation Fee", entity: "Ashley Rose (Influencer)", initial: "A", color: "bg-pink-100 text-pink-600", status: "Pending", statusColor: "bg-yellow-50 text-yellow-800", amount: "-$250.00", amountColor: "" },
-  { date: "Oct 20, 2023", desc: "Royalty Payout Q3", entity: "Global Beauty Co.", initial: "G", color: "bg-blue-100 text-blue-600", status: "Received", statusColor: "bg-green-50 text-green-700", amount: "+$12,000.00", amountColor: "text-green-600 font-bold" },
-  { date: "Oct 18, 2023", desc: "Material Supply #B09", entity: "Organic Base Ltd.", initial: "O", color: "bg-orange-100 text-orange-600", status: "Failed", statusColor: "bg-red-50 text-red-700", amount: "-$890.00", amountColor: "" },
-  { date: "Oct 15, 2023", desc: "Platform Subscription", entity: "BeautyChain", initial: "B", color: "bg-primary/20 text-primary", status: "Paid", statusColor: "bg-green-50 text-green-700", amount: "-$99.00", amountColor: "" },
-];
+import { TrendingUp, Clock, CreditCard, MoreVertical, CalendarDays, Loader2, Wallet } from "lucide-react";
+import { useWallet } from "@/hooks/useWallet";
+import { useTransactions } from "@/hooks/useTransactions";
+import { format } from "date-fns";
 
 const gateways = [
-  { name: "Stripe", initial: "S", bg: "bg-[#635BFF]", connected: true, detail: "acct_...45x" },
+  { name: "Stripe", initial: "S", bg: "bg-[#635BFF]", connected: false, detail: "Connect your Stripe account to enable escrow deposits, milestone releases, and payouts." },
   { name: "PayPal", initial: "P", bg: "bg-[#003087]", connected: false, detail: "Connect your PayPal Business account to accept global payments securely." },
 ];
 
+const statusColor: Record<string, string> = {
+  pending: "bg-yellow-50 text-yellow-800",
+  funded: "bg-blue-50 text-blue-700",
+  completed: "bg-green-50 text-green-700",
+  approved: "bg-green-50 text-green-700",
+  released: "bg-green-50 text-green-700",
+  failed: "bg-red-50 text-red-700",
+};
+
 export default function PaymentsWallets() {
+  const { wallet, isLoading: walletLoading, initWallet } = useWallet();
+  const { data: transactions = [], isLoading: txLoading } = useTransactions();
+
+  useEffect(() => {
+    if (!walletLoading && !wallet) {
+      initWallet.mutate();
+    }
+  }, [walletLoading, wallet]);
+
+  const balance = wallet ? Number(wallet.balance) : 0;
+  const pendingBalance = wallet ? Number(wallet.pending_balance) : 0;
+  const totalReceived = wallet ? Number(wallet.total_received) : 0;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -39,13 +57,19 @@ export default function PaymentsWallets() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Wallet Balance</p>
-                  <h3 className="mt-2 text-3xl font-bold tracking-tight">$12,450.00</h3>
+                  {walletLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin mt-2 text-muted-foreground" />
+                  ) : (
+                    <h3 className="mt-2 text-3xl font-bold tracking-tight">${balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</h3>
+                  )}
                 </div>
                 <div className="p-2 bg-green-50 rounded-lg"><TrendingUp className="h-5 w-5 text-green-600" /></div>
               </div>
               <div className="mt-4 flex items-center gap-2">
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">+5.2%</Badge>
-                <span className="text-xs text-muted-foreground">from last month</span>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                  <Wallet className="h-3 w-3 mr-1" /> Active
+                </Badge>
+                <span className="text-xs text-muted-foreground">Total received: ${totalReceived.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
               </div>
             </CardContent>
           </Card>
@@ -53,24 +77,28 @@ export default function PaymentsWallets() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending Payouts</p>
-                  <h3 className="mt-2 text-3xl font-bold tracking-tight">$1,200.00</h3>
+                  <p className="text-sm font-medium text-muted-foreground">Pending / In Escrow</p>
+                  {walletLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin mt-2 text-muted-foreground" />
+                  ) : (
+                    <h3 className="mt-2 text-3xl font-bold tracking-tight">${pendingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</h3>
+                  )}
                 </div>
                 <div className="p-2 bg-amber-50 rounded-lg"><Clock className="h-5 w-5 text-amber-600" /></div>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">3 transactions pending</p>
+              <p className="mt-4 text-xs text-muted-foreground">{transactions.filter(t => t.escrow_status === "pending" || t.escrow_status === "funded").length} transactions pending</p>
             </CardContent>
           </Card>
           <Card className="bg-primary text-primary-foreground">
             <CardContent className="p-6 relative overflow-hidden">
               <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-primary-foreground/10 blur-2xl" />
               <div className="relative z-10">
-                <p className="text-sm font-medium text-primary-foreground/80">Next Scheduled Payout</p>
-                <h3 className="mt-2 text-2xl font-bold tracking-tight">Nov 01, 2023</h3>
+                <p className="text-sm font-medium text-primary-foreground/80">Stripe Integration</p>
+                <h3 className="mt-2 text-xl font-bold tracking-tight">Coming Soon</h3>
                 <div className="mt-4">
-                  <Button variant="secondary" size="sm" className="text-xs bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground border-0">
-                    <CalendarDays className="h-3 w-3 mr-1" /> View Schedule
-                  </Button>
+                  <Badge variant="secondary" className="text-xs bg-primary-foreground/20 text-primary-foreground border-0">
+                    <CalendarDays className="h-3 w-3 mr-1" /> Escrow-ready architecture
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -82,7 +110,7 @@ export default function PaymentsWallets() {
           <div className="xl:col-span-1 space-y-4">
             <h3 className="text-lg font-bold">Linked Gateways</h3>
             {gateways.map((gw, i) => (
-              <Card key={i} className={!gw.connected ? "opacity-80 hover:opacity-100 transition-opacity" : ""}>
+              <Card key={i} className="opacity-80 hover:opacity-100 transition-opacity">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -90,26 +118,16 @@ export default function PaymentsWallets() {
                       <div>
                         <h4 className="font-bold">{gw.name}</h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className={`h-1.5 w-1.5 rounded-full ${gw.connected ? "bg-green-500" : "bg-muted-foreground/40"}`} />
-                          <span className={`text-xs font-medium ${gw.connected ? "text-green-600" : "text-muted-foreground"}`}>{gw.connected ? "Connected" : "Not Connected"}</span>
+                          <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                          <span className="text-xs font-medium text-muted-foreground">Not Connected</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  {gw.connected ? (
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Account ID</span>
-                        <span className="font-mono">{gw.detail}</span>
-                      </div>
-                      <Button variant="outline" className="w-full text-sm">Manage Settings</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground leading-relaxed">{gw.detail}</p>
-                      <Button className="w-full text-sm">Connect Account</Button>
-                    </div>
-                  )}
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground leading-relaxed">{gw.detail}</p>
+                    <Button className="w-full text-sm" disabled>Connect Account (Phase 2)</Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -125,35 +143,54 @@ export default function PaymentsWallets() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs uppercase tracking-wider">Date</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Description</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Entity</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider">Status</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-right">Amount</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((t, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{t.date}</TableCell>
-                      <TableCell className="text-sm font-medium">{t.desc}</TableCell>
-                      <TableCell className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className={`h-6 w-6 rounded-full ${t.color} flex items-center justify-center text-xs font-bold`}>{t.initial}</div>
-                          {t.entity}
-                        </div>
-                      </TableCell>
-                      <TableCell><Badge variant="outline" className={`text-xs font-medium ${t.statusColor}`}>{t.status}</Badge></TableCell>
-                      <TableCell className={`text-sm font-mono text-right font-medium ${t.amountColor}`}>{t.amount}</TableCell>
-                      <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></TableCell>
+              {txLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Wallet className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">No transactions yet</p>
+                  <p className="text-sm mt-1">Transactions from escrow milestones will appear here.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs uppercase tracking-wider">Date</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider">Description</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider">Type</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider">Status</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider text-right">Amount</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider text-right">Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {format(new Date(t.created_at), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">{t.description || "Transaction"}</TableCell>
+                        <TableCell className="text-sm">
+                          <Badge variant="outline" className="text-xs">{t.transaction_type?.replace(/_/g, " ")}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-xs font-medium ${statusColor[t.escrow_status] || ""}`}>
+                            {t.escrow_status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm font-mono text-right font-medium">
+                          ${Number(t.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>
