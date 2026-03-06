@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TranslateButton } from "@/components/TranslateButton";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -242,6 +243,7 @@ export function RfqDetailDialog({
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Description</p>
                     <p className="text-foreground">{rfq.description}</p>
+                    <TranslateButton text={rfq.description} context="rfq_description" />
                   </div>
                 )}
 

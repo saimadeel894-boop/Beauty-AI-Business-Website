@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TranslateButton } from "@/components/TranslateButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -108,6 +109,7 @@ export function BrandRfqDetailDialog({ rfq, onClose }: BrandRfqDetailDialogProps
                 Description
               </h4>
               <p className="text-sm whitespace-pre-wrap">{rfq.description}</p>
+              <TranslateButton text={rfq.description} context="rfq_description" />
             </div>
           )}
 
