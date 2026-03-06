@@ -85,6 +85,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       { name: "Market Intel", href: "/market-intelligence", icon: Globe },
       { name: "Ingredients", href: "/ingredients", icon: Beaker },
       { name: "Campaign Tracking", href: "/campaign-tracking", icon: Target },
+      { name: "Campaign Analytics", href: "/campaign-analytics", icon: TrendingUp },
       { name: "Campaign Manager", href: "/campaign-manager", icon: Settings },
       { name: "divider", href: "#", icon: LayoutDashboard },
       { name: "Compliance", href: "/compliance", icon: Shield },

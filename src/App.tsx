@@ -99,6 +99,7 @@ const App = () => (
             {/* Platform-wide routes */}
             <Route path="/messages" element={<ProtectedRoute requireRole requireProfile><Messaging /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute requireRole requireProfile><Analytics /></ProtectedRoute>} />
+            <Route path="/campaign-analytics" element={<ProtectedRoute requireRole requireProfile><CampaignAnalytics /></ProtectedRoute>} />
             <Route path="/ai-matching" element={<ProtectedRoute requireRole requireProfile><AIMatching /></ProtectedRoute>} />
             <Route path="/market-intelligence" element={<ProtectedRoute requireRole requireProfile><MarketIntelligence /></ProtectedRoute>} />
             <Route path="/ingredients" element={<ProtectedRoute requireRole requireProfile><IngredientDatabase /></ProtectedRoute>} />
