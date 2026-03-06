@@ -153,7 +153,7 @@ export default function AIMatching() {
         description: d.data().description,
       }));
 
-      // Fetch influencers
+      // Fetch influencers with expanded metrics
       const infSnap = await getDocs(collection(db, "influencerProfiles"));
       const influencers = infSnap.docs.map(d => ({
         id: d.id,
@@ -161,6 +161,10 @@ export default function AIMatching() {
         primaryPlatform: d.data().primaryPlatform,
         niche: d.data().niche || "General",
         location: d.data().location || "Unknown",
+        followerCount: d.data().followerCount || d.data().follower_count || 0,
+        engagementRate: d.data().engagementRate || d.data().engagement_rate || 0,
+        audienceGeography: d.data().audienceGeography || d.data().audience_geography || {},
+        followerDemographics: d.data().followerDemographics || d.data().follower_demographics || {},
       }));
 
       // AI match manufacturers
