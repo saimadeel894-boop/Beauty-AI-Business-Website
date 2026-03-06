@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TranslateButton } from "@/components/TranslateButton";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
