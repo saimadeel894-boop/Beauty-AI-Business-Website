@@ -100,6 +100,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       { name: "Escrow", href: "/escrow", icon: Lock },
       { name: "Contracts", href: "/contracts", icon: ScrollText },
       { name: "Disputes", href: "/disputes", icon: Gavel },
+      { name: "divider", href: "#", icon: LayoutDashboard },
+      { name: "Admin Panel", href: "/admin", icon: ShieldCheck },
     ];
 
     switch (profile?.role) {

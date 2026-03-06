@@ -116,6 +116,7 @@ const App = () => (
             <Route path="/escrow" element={<ProtectedRoute requireRole requireProfile><EscrowPayment /></ProtectedRoute>} />
             <Route path="/contracts" element={<ProtectedRoute requireRole requireProfile><ContractGeneration /></ProtectedRoute>} />
             <Route path="/disputes" element={<ProtectedRoute requireRole requireProfile><DisputeResolution /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requireRole requireProfile><AdminDashboard /></ProtectedRoute>} />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
