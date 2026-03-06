@@ -25,8 +25,12 @@ interface InfluencerProfileData {
   bio?: string;
   niche?: string;
   audienceSize?: string;
+  followerCount?: number;
   engagementRate?: string;
+  engagementRateNumeric?: number;
   audienceDemographics?: string;
+  audienceGeography?: Record<string, number>;
+  followerDemographics?: Record<string, any>;
   pastCollaborations?: string[];
   portfolioLinks?: string[];
   website?: string;
