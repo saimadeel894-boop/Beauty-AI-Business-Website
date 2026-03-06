@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_matches: {
+        Row: {
+          brand_id: string
+          candidate_id: string
+          candidate_type: string
+          created_at: string
+          explanation: string
+          id: string
+          score: number
+        }
+        Insert: {
+          brand_id: string
+          candidate_id: string
+          candidate_type: string
+          created_at?: string
+          explanation: string
+          id?: string
+          score: number
+        }
+        Update: {
+          brand_id?: string
+          candidate_id?: string
+          candidate_type?: string
+          created_at?: string
+          explanation?: string
+          id?: string
+          score?: number
+        }
+        Relationships: []
+      }
       brand_profiles: {
         Row: {
           brand_name: string
