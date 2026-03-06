@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { TranslateButton } from "@/components/TranslateButton";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useManufacturerPublicProfile } from "@/hooks/useManufacturerPublicProfile";
 import { Button } from "@/components/ui/button";
