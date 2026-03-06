@@ -241,6 +241,60 @@ export type Database = {
           },
         ]
       }
+      escrow_milestones: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          brand_id: string
+          contract_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          funded_at: string | null
+          id: string
+          manufacturer_id: string
+          milestone_order: number
+          released_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          brand_id: string
+          contract_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          funded_at?: string | null
+          id?: string
+          manufacturer_id: string
+          milestone_order?: number
+          released_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          brand_id?: string
+          contract_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          funded_at?: string | null
+          id?: string
+          manufacturer_id?: string
+          milestone_order?: number
+          released_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       influencer_profiles: {
         Row: {
           audience_geography: Json | null
@@ -489,6 +543,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          escrow_status: string
+          id: string
+          milestone_id: string | null
+          net_amount: number
+          payer_id: string
+          platform_fee: number
+          receiver_id: string
+          stripe_payment_intent_id: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          escrow_status?: string
+          id?: string
+          milestone_id?: string | null
+          net_amount?: number
+          payer_id: string
+          platform_fee?: number
+          receiver_id: string
+          stripe_payment_intent_id?: string | null
+          transaction_type?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          escrow_status?: string
+          id?: string
+          milestone_id?: string | null
+          net_amount?: number
+          payer_id?: string
+          platform_fee?: number
+          receiver_id?: string
+          stripe_payment_intent_id?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          currency: string
+          id: string
+          pending_balance: number
+          total_received: number
+          total_sent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          pending_balance?: number
+          total_received?: number
+          total_sent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          pending_balance?: number
+          total_received?: number
+          total_sent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
