@@ -64,27 +64,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     const platformNav = [
       { name: "Messages", href: "/messages", icon: MessageSquare },
-      { name: "Analytics", href: "/analytics", icon: BarChart3 },
-      { name: "AI Matching", href: "/ai-matching", icon: Sparkles },
-      { name: "Market Intel", href: "/market-intelligence", icon: Globe },
-      { name: "Ingredients", href: "/ingredients", icon: Beaker },
-      { name: "Campaign Tracking", href: "/campaign-tracking", icon: Target },
-      { name: "Campaign Analytics", href: "/campaign-analytics", icon: TrendingUp },
-      { name: "Campaign Manager", href: "/campaign-manager", icon: Settings },
-      { name: "divider", href: "#", icon: LayoutDashboard },
-      { name: "Compliance", href: "/compliance", icon: Shield },
-      { name: "RFQ Manager", href: "/rfq-management", icon: ClipboardList },
-      { name: "Samples", href: "/sample-management", icon: Truck },
-      { name: "Creator Discovery", href: "/influencer-discovery", icon: UserSearch },
-      { name: "Profile Mgmt", href: "/profile-management", icon: UserCog },
-      { name: "divider", href: "#", icon: LayoutDashboard },
-      { name: "Invoicing", href: "/invoicing", icon: Receipt },
-      { name: "Payments & Wallets", href: "/payments-wallets", icon: Wallet },
-      { name: "Escrow", href: "/escrow", icon: Lock },
-      { name: "Contracts", href: "/contracts", icon: ScrollText },
-      { name: "Disputes", href: "/disputes", icon: Gavel },
-      { name: "divider", href: "#", icon: LayoutDashboard },
-      { name: "Admin Panel", href: "/admin", icon: ShieldCheck },
     ];
 
     switch (profile?.role) {
