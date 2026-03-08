@@ -259,11 +259,25 @@ Calculate weighted score 0-100. Be deterministic. Return JSON array sorted by ma
           const content = data.choices?.[0]?.message?.content || "";
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            results = parsed.map((p: any) => ({
-              candidateId: p.candidateId,
-              matchScore: Math.min(100, Math.max(0, Math.round(p.matchScore))),
-              explanation: p.explanation || "",
-            }));
+            // Map candidateId back to actual UUIDs — OpenAI may return names instead of IDs
+            results = parsed.map((p: any) => {
+              let resolvedId = p.candidateId;
+              // Check if candidateId is NOT a valid UUID pattern
+              const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+              if (!uuidRegex.test(resolvedId)) {
+                // Try to find matching candidate by name
+                const match = (candidates || []).find((c: any) => {
+                  const names = [c.companyName, c.company_name, c.name, c.brandName, c.brand_name].filter(Boolean);
+                  return names.some((n: string) => n === resolvedId || n.toLowerCase() === String(resolvedId).toLowerCase());
+                });
+                if (match) resolvedId = match.id;
+              }
+              return {
+                candidateId: resolvedId,
+                matchScore: Math.min(100, Math.max(0, Math.round(p.matchScore))),
+                explanation: p.explanation || "",
+              };
+            });
             usedAI = true;
           }
         }
