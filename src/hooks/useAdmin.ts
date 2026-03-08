@@ -31,6 +31,7 @@ interface AdminUser {
   id: string;
   email: string;
   role: string | null;
+  status: string;
   profile_completed: boolean;
   created_at: string;
 }
@@ -88,6 +89,7 @@ export function useAdminDashboard() {
 
       setUsers(profiles.map((p: any) => ({
         id: p.id, email: p.email, role: p.role,
+        status: p.status || "active",
         profile_completed: p.profile_completed, created_at: p.created_at,
       })));
       setTransactions(txData);
@@ -121,4 +123,34 @@ export function useAdminDashboard() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   return { users, stats, transactions, milestones, matches, analyses, loading, refetch: fetchAll };
+}
+
+export function useAdminUserActions(onSuccess?: () => void) {
+  const { toast } = useToast();
+  const [acting, setActing] = useState(false);
+
+  const updateUserStatus = useCallback(async (userId: string, action: "suspend" | "approve" | "reactivate") => {
+    setActing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const res = await supabase.functions.invoke("admin-update-user", {
+        body: { userId, action },
+      });
+
+      if (res.error) throw res.error;
+      if (res.data?.error) throw new Error(res.data.error);
+
+      const labels = { suspend: "suspended", approve: "approved", reactivate: "reactivated" };
+      toast({ title: "Success", description: `User ${labels[action]} successfully.` });
+      onSuccess?.();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to update user", variant: "destructive" });
+    } finally {
+      setActing(false);
+    }
+  }, [toast, onSuccess]);
+
+  return { updateUserStatus, acting };
 }

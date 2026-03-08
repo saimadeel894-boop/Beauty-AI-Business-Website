@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Users, TrendingUp, DollarSign, Shield, Sparkles, Search,
-  AlertTriangle, CheckCircle, Clock, Loader2, BarChart3,
-  Building2, Factory, User, FileText, FlaskConical,
+  AlertTriangle, CheckCircle, Loader2, BarChart3,
+  Building2, Factory, User, FileText, FlaskConical, Ban, UserCheck,
 } from "lucide-react";
-import { useAdminCheck, useAdminDashboard } from "@/hooks/useAdmin";
+import { useAdminCheck, useAdminDashboard, useAdminUserActions } from "@/hooks/useAdmin";
 import { format } from "date-fns";
 
 function StatCard({ title, value, icon: Icon, description, color = "text-primary" }: {
@@ -34,7 +38,16 @@ function StatCard({ title, value, icon: Icon, description, color = "text-primary
   );
 }
 
-function UsersTab({ users, search }: { users: any[]; search: string }) {
+function UserStatusBadge({ status }: { status: string }) {
+  if (status === "suspended") return <Badge className="bg-destructive/10 text-destructive text-xs"><Ban className="h-3 w-3 mr-1" />Suspended</Badge>;
+  if (status === "pending_approval") return <Badge className="bg-yellow-100 text-yellow-700 text-xs">Pending</Badge>;
+  return <Badge className="bg-green-100 text-green-700 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+}
+
+function UsersTab({ users, search, onAction }: {
+  users: any[]; search: string;
+  onAction: (userId: string, action: "suspend" | "approve" | "reactivate", email: string) => void;
+}) {
   const filtered = users.filter(u =>
     !search || u.email.toLowerCase().includes(search.toLowerCase())
   );
@@ -47,8 +60,10 @@ function UsersTab({ users, search }: { users: any[]; search: string }) {
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Profile</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Joined</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -63,12 +78,35 @@ function UsersTab({ users, search }: { users: any[]; search: string }) {
                       {u.role || "unset"}
                     </Badge>
                   </td>
+                  <td className="px-4 py-3"><UserStatusBadge status={u.status} /></td>
                   <td className="px-4 py-3">
                     {u.profile_completed
                       ? <Badge className="bg-green-100 text-green-700 text-xs">Complete</Badge>
                       : <Badge className="bg-yellow-100 text-yellow-700 text-xs">Incomplete</Badge>}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{format(new Date(u.created_at), "MMM d, yyyy")}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      {u.status === "suspended" ? (
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => onAction(u.id, "reactivate", u.email)}>
+                          <UserCheck className="h-3 w-3 mr-1" /> Reactivate
+                        </Button>
+                      ) : u.status === "pending_approval" ? (
+                        <>
+                          <Button size="sm" variant="outline" className="text-xs h-7 text-green-600" onClick={() => onAction(u.id, "approve", u.email)}>
+                            <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-xs h-7 text-destructive" onClick={() => onAction(u.id, "suspend", u.email)}>
+                            <Ban className="h-3 w-3 mr-1" /> Reject
+                          </Button>
+                        </>
+                      ) : (
+                        <Button size="sm" variant="outline" className="text-xs h-7 text-destructive" onClick={() => onAction(u.id, "suspend", u.email)}>
+                          <Ban className="h-3 w-3 mr-1" /> Suspend
+                        </Button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -249,8 +287,28 @@ function ComplianceTab({ analyses }: { analyses: any[] }) {
 
 export default function AdminDashboard() {
   const { isAdmin, loading: adminLoading } = useAdminCheck();
-  const { users, stats, transactions, milestones, matches, analyses, loading } = useAdminDashboard();
+  const { users, stats, transactions, milestones, matches, analyses, loading, refetch } = useAdminDashboard();
+  const { updateUserStatus, acting } = useAdminUserActions(refetch);
   const [search, setSearch] = useState("");
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean; action: "suspend" | "approve" | "reactivate"; userId: string; email: string;
+  }>({ open: false, action: "suspend", userId: "", email: "" });
+
+  const handleAction = (userId: string, action: "suspend" | "approve" | "reactivate", email: string) => {
+    setConfirmDialog({ open: true, action, userId, email });
+  };
+
+  const confirmAction = async () => {
+    await updateUserStatus(confirmDialog.userId, confirmDialog.action);
+    setConfirmDialog(prev => ({ ...prev, open: false }));
+  };
+
+  const actionLabels = {
+    suspend: { title: "Suspend User", description: "This will prevent the user from accessing the platform. They will not be able to log in or perform any actions.", button: "Suspend", destructive: true },
+    approve: { title: "Approve User", description: "This will activate the user's account and grant them access to the platform.", button: "Approve", destructive: false },
+    reactivate: { title: "Reactivate User", description: "This will restore the user's access to the platform.", button: "Reactivate", destructive: false },
+  };
 
   if (adminLoading || loading) {
     return (
@@ -274,10 +332,11 @@ export default function AdminDashboard() {
     );
   }
 
+  const label = actionLabels[confirmDialog.action];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
@@ -291,7 +350,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Overview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
           <StatCard title="Total Users" value={stats.totalUsers} icon={Users} />
           <StatCard title="Manufacturers" value={stats.activeManufacturers} icon={Factory} />
@@ -300,7 +358,6 @@ export default function AdminDashboard() {
           <StatCard title="Transaction Volume" value={`$${stats.totalVolume.toLocaleString()}`} icon={DollarSign} />
         </div>
 
-        {/* Tabs */}
         <Tabs defaultValue="users">
           <TabsList className="grid grid-cols-5 w-full max-w-2xl">
             <TabsTrigger value="users" className="gap-1"><Users className="h-3 w-3" /> Users</TabsTrigger>
@@ -310,7 +367,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="analytics" className="gap-1"><BarChart3 className="h-3 w-3" /> Analytics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users"><UsersTab users={users} search={search} /></TabsContent>
+          <TabsContent value="users"><UsersTab users={users} search={search} onAction={handleAction} /></TabsContent>
           <TabsContent value="matching"><MatchingTab matches={matches} /></TabsContent>
           <TabsContent value="transactions"><TransactionsTab transactions={transactions} milestones={milestones} /></TabsContent>
           <TabsContent value="compliance"><ComplianceTab analyses={analyses} /></TabsContent>
@@ -326,6 +383,31 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{label.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">{confirmDialog.email}</span>
+              <br /><br />
+              {label.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmAction}
+              disabled={acting}
+              className={label.destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {acting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              {label.button}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
