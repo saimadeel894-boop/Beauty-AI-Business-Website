@@ -1,7 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
-import { useAdminCheck } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
@@ -19,27 +18,10 @@ import {
   MessageSquare,
   HelpCircle,
   Diamond,
-  TrendingUp,
   Plus,
   Package,
   FileText,
-  Sparkles,
-  Beaker,
-  Globe,
-  BarChart3,
-  Target,
   User,
-  Shield,
-  ClipboardList,
-  Truck,
-  UserSearch,
-  UserCog,
-  Receipt,
-  Wallet,
-  Lock,
-  ScrollText,
-  Gavel,
-  ShieldCheck,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
