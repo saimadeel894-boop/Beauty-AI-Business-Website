@@ -8,7 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   Megaphone, Package, FileCheck, ArrowRight, CheckCircle, Mail,
-  Loader2, User, BarChart3, Target, XCircle,
+  Loader2, User, XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
