@@ -43,6 +43,16 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
 
+    if (!acceptedTerms) {
+      toast({
+        title: "Terms Required",
+        description: "You must agree to the Terms of Service and Privacy Policy.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const result = signupSchema.safeParse({ email, password, confirmPassword });
     if (!result.success) {
       toast({
