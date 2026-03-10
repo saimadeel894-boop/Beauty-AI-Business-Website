@@ -14,6 +14,7 @@ import SelectRole from "./pages/SelectRole";
 import CreateProfile from "./pages/CreateProfile";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
 
 // Manufacturer Pages
 import ManufacturerProfile from "./pages/manufacturer/ManufacturerProfile";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
             {/* Protected onboarding routes */}
             <Route path="/select-role" element={<ProtectedRoute><SelectRole /></ProtectedRoute>} />
