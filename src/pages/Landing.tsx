@@ -228,10 +228,9 @@ export default function Landing() {
             <Logo size="sm" />
 
             <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground">About Us</a>
-              <a href="#" className="hover:text-foreground">Contact</a>
-              <a href="#" className="hover:text-foreground">Privacy Policy</a>
-              <a href="#" className="hover:text-foreground">Terms of Service</a>
+              <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
+              <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
+              <a href="mailto:legal@louisboss.com" className="hover:text-foreground">Contact</a>
             </nav>
           </div>
 

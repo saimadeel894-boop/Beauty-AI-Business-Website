@@ -9,6 +9,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { PasswordStrength, validatePassword } from "@/components/ui/password-strength";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Strong password schema
 const passwordSchema = z.string()
@@ -32,6 +33,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp } = useFirebaseAuth();
   const { toast } = useToast();
@@ -40,6 +42,16 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!acceptedTerms) {
+      toast({
+        title: "Terms Required",
+        description: "You must agree to the Terms of Service and Privacy Policy.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     const result = signupSchema.safeParse({ email, password, confirmPassword });
     if (!result.success) {
@@ -181,7 +193,26 @@ export default function Signup() {
               />
             </div>
 
-            <Button type="submit" className="w-full h-11" disabled={loading}>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="terms" className="text-sm text-muted-foreground leading-tight">
+                I agree to the{" "}
+                <Link to="/terms" className="text-primary hover:underline" target="_blank">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" className="text-primary hover:underline" target="_blank">
+                  Privacy Policy
+                </Link>.
+              </label>
+            </div>
+
+            <Button type="submit" className="w-full h-11" disabled={loading || !acceptedTerms}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
