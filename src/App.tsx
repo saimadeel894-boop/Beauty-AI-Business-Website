@@ -14,6 +14,7 @@ import SelectRole from "./pages/SelectRole";
 import CreateProfile from "./pages/CreateProfile";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
 
 // Manufacturer Pages
 import ManufacturerProfile from "./pages/manufacturer/ManufacturerProfile";
